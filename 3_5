@@ -1,0 +1,126 @@
+package connectfour
+
+private const val RED = 'o'
+private const val YELLOW = '*'
+private const val EMPTY_CELL = ' '
+
+private lateinit var redPlayer: String
+private lateinit var yellowPlayer: String
+private var isRedMove = true
+private var row = 6
+private var column = 7
+
+fun main() {
+    menu()
+    printField()
+    move()
+}
+
+fun menu() {
+    println("Connect Four\nFirst player's name:")
+    redPlayer = readln()
+    println("Second player's name:")
+    yellowPlayer = readln()
+    loop@ while (true) {
+        println("Set the board dimensions (Rows x Columns)\nPress Enter for default (6 x 7)")
+        val input = readln()
+        if (input.isEmpty()) break
+        val regex = """^\s*(\d+)\s*[Xx]\s*(\d+)\s*$""".toRegex()
+        if (!input.matches(regex)) {
+            println("Invalid input")
+            continue
+        }
+        val inputMatches = regex.find(input)!!
+        val (r, c) = inputMatches.destructured
+        val arr = mapOf("rows" to r.toInt(), "columns" to c.toInt())
+        for (i in arr) {
+            if (i.value !in 5..9) {
+                println("Board ${i.key} should be from 5 to 9")
+                continue@loop
+            }
+        }
+        row = arr["rows"]!!
+        column = arr["columns"]!!
+        break
+    }
+    println(
+        "$redPlayer VS $yellowPlayer\n" +
+                "$row X $column board"
+    )
+}
+
+object Field {
+    val frame = Array(row) { Array(column) { EMPTY_CELL } }
+}
+
+fun printField() {
+    val sb = buildString {
+        repeat(column) {
+            append(EMPTY_CELL)
+            append(it + 1)
+        }
+        append(EMPTY_CELL)
+        append('\n')
+        for (i in 0 until row) {
+            for (j in 0 until column) {
+                append(Border.VERT.symbol)
+                append(Field.frame[i][j])
+            }
+            append(Border.VERT.symbol)
+            append('\n')
+        }
+        append(Border.CORNER_L.symbol)
+        repeat(column - 1) {
+            append(Border.HOR.symbol)
+            append(Border.CONNECTOR.symbol)
+        }
+        append(Border.HOR.symbol)
+        append(Border.CORNER_R.symbol)
+    }
+    println(sb)
+}
+
+fun move() {
+    while (true) {
+        println("${if (isRedMove) redPlayer else yellowPlayer}'s turn:")
+        val input = readln()
+        when {
+            input == "end" -> {
+                println("Game over!")
+                break
+            }
+
+            !input.matches("""^\d+$""".toRegex()) -> {
+                println("Incorrect column number")
+                continue
+            }
+
+            input.toInt() !in 1..column -> {
+                println("The column number is out of range (1 - $column)")
+                continue
+            }
+
+            else -> if (!checkAndChangeFrame(input.toInt() - 1)) continue else printField()
+        }
+    }
+}
+
+fun checkAndChangeFrame(number: Int): Boolean {
+    for (i in row - 1 downTo 0) {
+        if (Field.frame[i][number] == EMPTY_CELL) {
+            Field.frame[i][number] = if (isRedMove) RED else YELLOW
+            isRedMove = !isRedMove
+            return true
+        }
+    }
+    println("Column ${number + 1} is full")
+    return false
+}
+
+enum class Border(val symbol: Char) {
+    HOR('═'),
+    VERT('║'),
+    CORNER_L('╚'),
+    CORNER_R('╝'),
+    CONNECTOR('╩'),
+}
