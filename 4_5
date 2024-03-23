@@ -1,0 +1,169 @@
+package connectfour
+
+private const val RED = 'o'
+private const val YELLOW = '*'
+private const val EMPTY_CELL = ' '
+
+private lateinit var redPlayer: String  //имя игрока 1
+private lateinit var yellowPlayer: String  //имя игрока 2
+private var isRedMove = true //флаг, чей ход
+private var rows = 6 //ряды по умолчанию
+private var columns = 7 //столбцы по умолчанию
+private var countOfCells = 0
+private lateinit var moveCoordinates: Pair<Int, Int>
+
+fun main() {
+    menu()
+    printField()
+    move()
+    println("Game over!")
+}
+
+fun menu() {
+    println("Connect Four\nFirst player's name:")
+    redPlayer = readln()
+    println("Second player's name:")
+    yellowPlayer = readln()
+    loop@ while (true) {
+        println("Set the board dimensions (Rows x Columns)\nPress Enter for default (6 x 7)")
+        val input = readln()
+        if (input.isEmpty()) break
+        val regex = """^\s*(\d+)\s*[Xx]\s*(\d+)\s*$""".toRegex()
+        if (!input.matches(regex)) {
+            println("Invalid input")
+            continue
+        }
+        val inputMatches = regex.find(input)!!
+        val (r, c) = inputMatches.destructured
+        val arr = mapOf("rows" to r.toInt(), "columns" to c.toInt())
+        for (i in arr) {
+            if (i.value !in 5..9) {
+                println("Board ${i.key} should be from 5 to 9")
+                continue@loop
+            }
+        }
+        rows = arr["rows"]!!
+        columns = arr["columns"]!!
+        countOfCells = rows * columns
+        break
+    }
+    println("$redPlayer VS $yellowPlayer\n$rows X $columns board")
+}
+
+//двумерный массив фишек и пустых мест
+object Field {
+    val frame = Array(rows) { Array(columns) { EMPTY_CELL } }
+    var countOfFigures = 0
+}
+
+//печать поля
+fun printField() {
+    val sb = buildString {
+        repeat(columns) {
+            append(EMPTY_CELL)
+            append(it + 1)
+        }
+        append(EMPTY_CELL)
+        append('\n')
+        for (i in 0 until rows) {
+            for (j in 0 until columns) {
+                append(Border.VERT.symbol)
+                append(Field.frame[i][j])
+            }
+            append(Border.VERT.symbol)
+            append('\n')
+        }
+        append(Border.CORNER_L.symbol)
+        repeat(columns - 1) {
+            append(Border.HOR.symbol)
+            append(Border.CONNECTOR.symbol)
+        }
+        append(Border.HOR.symbol)
+        append(Border.CORNER_R.symbol)
+    }
+    println(sb)
+}
+
+//проверка на корректность введенного номера столбца, куда ставить фишку; если все хорошо и в столбце есть место,
+// то фишка ставится и печатается поле. Затем проверка на выигрыш и ничью (следующий ход невозможно сделать, т.к. нигде нет места)
+fun move() {
+    while (true) {
+        println("${if (isRedMove) redPlayer else yellowPlayer}'s turn:")
+        val input = readln()
+        when {
+            input == "end" -> break
+
+            !input.matches("""^\d+$""".toRegex()) -> {
+                println("Incorrect column number")
+                continue
+            }
+
+            input.toInt() !in 1..columns -> {
+                println("The column number is out of range (1 - $columns)")
+                continue
+            }
+
+            else -> if (!checkColumnIsNotFullAndChangeFrame(input.toInt() - 1)) continue else printField()
+        }
+        if (checkIsWin(moveCoordinates.first, moveCoordinates.second)) {
+            println("Player ${if (isRedMove) redPlayer else yellowPlayer} won")
+            break
+        }
+        if (checkIsDraw()) {
+            println("It is a draw")
+            break
+        }
+        isRedMove = !isRedMove
+    }
+}
+
+//проверка, что столбец не заполнен до конца и если правда, то ставится фишка на верх заполеннных фишек
+fun checkColumnIsNotFullAndChangeFrame(number: Int): Boolean {
+    for (i in rows - 1 downTo 0) {
+        if (Field.frame[i][number] == EMPTY_CELL) {
+            Field.frame[i][number] = if (isRedMove) RED else YELLOW //какую фишку ставить на поле
+            moveCoordinates = Pair(i, number) //координаты выставленной фишки (будут нужны для проверки рядов по вертикали, горизонтали и диагоналям на предмет выигрыша)
+            Field.countOfFigures += 1  //+1 фишка на поле (для проверки на ничью)
+            return true
+        }
+    }
+    println("Column ${number + 1} is full")
+    return false
+}
+
+//проверка на выигрыш: берется вновь поставленная фишка и проверяются ряды, на которых она стоит:
+// вертикальный, горизонтальный и 2 диагональных.
+// diag1 = ↗, diag2 = ↘.
+// к1 и к3 обозначают количество клеток, на сколько отстоит левая граница ячейки (к1 для diag1, к3 для diag2)
+// с которой начинаются диагональные ряды, а к2 и к4 - на сколько отстоит правая (к2 для diag1, к4 для diag2).
+// Ряды переводятся в строки и в каждой из них ищется совпадение с 4 фишками подряд.
+fun checkIsWin(row: Int, col: Int): Boolean {
+    val hor = Field.frame[row].joinToString("")
+    val vert = Array(rows) { Field.frame[it][col] }.joinToString("")
+    val k1 = minOf(rows - 1 - row, col - 0)
+    val k2 = minOf(row - 0, columns - 1 - col)
+    val startDiag1 = Pair(row + k1, col - k1) //клетка, от которой начинается отсчет 1 диагонального ряда
+    val diag1 = Array(k1 + k2 + 1) { Field.frame[startDiag1.first - it][startDiag1.second + it] }.joinToString("")
+    val k3 = minOf(row - 0, col - 0)
+    val k4 = minOf(rows - 1 - row, columns - 1 - col)
+    val startDiag2 = Pair(row - k3, col - k3) //клетка, от которой начинается отсчет 2 диагонального ряда
+    val diag2 = Array(k3 + k4 + 1) { Field.frame[startDiag2.first + it][startDiag2.second + it] }.joinToString("")
+    val arr = arrayOf(hor, vert, diag1, diag2)
+    val pattern = if (isRedMove) "$RED{4,}" else "\\$YELLOW{4,}"
+    for (a in arr) {
+        if (a.contains(pattern.toRegex())) return true
+    }
+    return false
+}
+
+//проверка на ничью
+fun checkIsDraw(): Boolean = Field.countOfFigures == countOfCells
+
+//знаки границ игрового поля
+enum class Border(val symbol: Char) {
+    HOR('═'),
+    VERT('║'),
+    CORNER_L('╚'),
+    CORNER_R('╝'),
+    CONNECTOR('╩'),
+}
