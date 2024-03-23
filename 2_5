@@ -1,0 +1,77 @@
+package connectfour
+
+const val HOR = '═'
+const val VERT = '║'
+const val CORNER_L = '╚'
+const val CORNER_R = '╝'
+const val CONNECTOR = '╩'
+const val EMPTY_CELL = ' '
+
+var row = 6
+var column = 7
+
+fun main() {
+    menu()
+    printField()
+}
+
+fun menu() {
+    println("Connect Four\nFirst player's name:")
+    val name1 = readln()
+    println("Second player's name:")
+    val name2 = readln()
+    loop@ while (true) {
+        println("Set the board dimensions (Rows x Columns)\nPress Enter for default (6 x 7)")
+        val input = readln()
+        if (input.isEmpty()) break
+        val regex = """^\s*(\d+)\s*[Xx]\s*(\d+)\s*$""".toRegex()
+        if (!input.matches(regex)) {
+            println("Invalid input")
+            continue
+        }
+        val inputMatches = regex.find(input)!!
+        val (r, c) = inputMatches.destructured
+        val arr = mapOf("rows" to r.toInt(), "columns" to c.toInt())
+        for (i in arr) {
+            if (i.value !in 5..9) {
+                println("Board ${i.key} should be from 5 to 9")
+                continue@loop
+            }
+        }
+        row = arr["rows"]!!
+        column = arr["columns"]!!
+        break
+    }
+    println("$name1 VS $name2\n" +
+            "$row X $column board")
+}
+
+object Field {
+    val frame = Array(row) { Array(column) { EMPTY_CELL } }
+}
+
+fun printField() {
+    val sb = buildString {
+        repeat(column) {
+            append(EMPTY_CELL)
+            append(it + 1)
+        }
+        append("$EMPTY_CELL\n")
+        for (i in 0 until row) {
+            for (j in 0 until column) {
+                append(VERT)
+                append(Field.frame[i][j])
+            }
+            append(VERT)
+            append('\n')
+        }
+        append(CORNER_L)
+        repeat(column - 1) {
+            append(HOR)
+            append(CONNECTOR)
+        }
+        append(HOR)
+        append(CORNER_R)
+    }
+    println(sb)
+}
