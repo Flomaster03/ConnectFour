@@ -1,0 +1,40 @@
+package connectfour
+
+var row = 6
+var column = 7
+
+fun main() {
+    menu()
+}
+
+fun menu() {
+    println("Connect Four\nFirst player's name:")
+    val name1 = readln()
+    println("Second player's name:")
+    val name2 = readln()
+
+    loop@ while (true) {
+        println("Set the board dimensions (Rows x Columns)\nPress Enter for default (6 x 7)")
+        val input = readln()
+        if (input.isEmpty()) break
+        val regex = """^\s*(\d+)\s*[Xx]\s*(\d+)\s*$""".toRegex()
+        if (!input.matches(regex)) {
+            println("Invalid input")
+            continue
+        }
+        val inputMatches = regex.find(input)!!
+        val (r, c) = inputMatches.destructured
+        val arr = mapOf("rows" to r.toInt(), "columns" to c.toInt())
+        for (i in arr) {
+            if (i.value !in 5..9) {
+                println("Board ${i.key} should be from 5 to 9")
+                continue@loop
+            }
+        }
+        row = arr["rows"]!!
+        column = arr["columns"]!!
+        break
+    }
+    println("$name1 VS $name2\n" +
+            "$row X $column board")
+}
